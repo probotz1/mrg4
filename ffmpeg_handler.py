@@ -1,4 +1,4 @@
-import ffmpeg
+import ffmpeg  # This imports the ffmpeg-python library
 
 def merge_video_audio(video_path, audio_path, output_path):
     """
@@ -9,8 +9,8 @@ def merge_video_audio(video_path, audio_path, output_path):
         (
             ffmpeg
             .input(video_path)
-            .output(audio_path, c='copy')
-            .output(output_path, c='copy', acodec='aac', shortest=None)
+            .input(audio_path)
+            .output(output_path, vcodec='copy', acodec='aac', shortest=None)
             .run(overwrite_output=True)
         )
         return True
