@@ -1,66 +1,70 @@
+import os
 from pyrogram import Client, filters
 from pyrogram.types import Message
-from ffmpeg_handler import merge_video_audio
-import os
-import uuid
+import ffmpeg
 
-# Configuration
-API_ID = "28015531"
-API_HASH = "2ab4ba37fd5d9ebf1353328fc915ad28"
-BOT_TOKEN = "7321073695:AAE2ZvYJg6_dQNhEvznmRCSsKMoNHoQWnuI"
+# Replace with your own values
+API_ID = "your_api_id"
+API_HASH = "your_api_hash"
+BOT_TOKEN = "your_bot_token"
 
-# Temporary file storage directory
-TEMP_DIR = "temp_files"
+app = Client("video_audio_merge_bot", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN)
 
-app = Client("video_audio_bot", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN)
-
-# Dictionary to hold user sessions and file paths
-user_sessions = {}
+# Dictionary to store user states
+user_states = {}
 
 @app.on_message(filters.command("start"))
-async def start_command(client: Client, message: Message):
-    await message.reply("Send me a video file to start.")
+async def start_command(client, message):
+    await message.reply_text("Welcome! Send me a video file to start the merging process.")
 
-@app.on_message(filters.video & filters.private)
-async def video_handler(client: Client, message: Message):
+@app.on_message(filters.video)
+async def handle_video(client, message: Message):
     user_id = message.from_user.id
-    video_file = await message.download(file_name=os.path.join(TEMP_DIR, f"{uuid.uuid4()}_video.mp4"))
+    video_file = await message.download()
+    user_states[user_id] = {"video": video_file}
+    await message.reply_text("Video received. Now send me an audio file.")
 
-    # Store the video path in user session
-    user_sessions[user_id] = {"video_path": video_file}
-
-    await message.reply("Now send me an audio file.")
-
-@app.on_message(filters.audio | filters.voice & filters.private)
-async def audio_handler(client: Client, message: Message):
+@app.on_message(filters.audio)
+async def handle_audio(client, message: Message):
     user_id = message.from_user.id
-
-    if user_id not in user_sessions or "video_path" not in user_sessions[user_id]:
-        await message.reply("Please send a video file first.")
+    if user_id not in user_states or "video" not in user_states[user_id]:
+        await message.reply_text("Please send a video file first.")
         return
 
-    audio_file = await message.download(file_name=os.path.join(TEMP_DIR, f"{uuid.uuid4()}_audio.mp3"))
+    audio_file = await message.download()
+    video_file = user_states[user_id]["video"]
 
-    # Get the video path from user session
-    video_path = user_sessions[user_id]["video_path"]
+    await message.reply_text("Processing... Please wait.")
 
-    # Path for the merged output
-    output_path = os.path.join(TEMP_DIR, f"{uuid.uuid4()}_merged.mp4")
-
-    # Merge video and audio
+    output_file = f"merged_{user_id}.mp4"
+    
     try:
-        merge_video_audio(video_path, audio_file, output_path)
-        await message.reply_video(video=output_path, caption="Here is your merged video.")
-    except Exception as e:
-        await message.reply(f"Sorry, there was an error merging your video and audio: {e}")
+        # Merge video and audio using FFmpeg
+        input_video = ffmpeg.input(video_file)
+        input_audio = ffmpeg.input(audio_file)
+        
+        (
+            ffmpeg
+            .output(input_video, input_audio, output_file, vcodec='copy', acodec='aac')
+            .overwrite_output()
+            .run(capture_stdout=True, capture_stderr=True)
+        )
 
-    # Clean up
-    os.remove(video_path)
-    os.remove(audio_file)
-    os.remove(output_path)
-    del user_sessions[user_id]
+        # Send the merged file
+        await client.send_video(user_id, output_file)
+        await message.reply_text("Here's your merged video!")
 
-# Ensure temp_files directory exists
-os.makedirs(TEMP_DIR, exist_ok=True)
+    except ffmpeg.Error as e:
+        await message.reply_text(f"An error occurred: {e.stderr.decode()}")
+
+    finally:
+        # Clean up files
+        os.remove(video_file)
+        os.remove(audio_file)
+        if os.path.exists(output_file):
+            os.remove(output_file)
+        
+        # Clear user state
+        del user_states[user_id]
 
 app.run()
