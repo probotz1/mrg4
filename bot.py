@@ -24,7 +24,7 @@ async def start_command(client: Client, message: Message):
 @app.on_message(filters.video & filters.private)
 async def video_handler(client: Client, message: Message):
     user_id = message.from_user.id
-    video_file = await message.download(file_name=os.path.join(TEMP_DIR, f"{uuid.uuid4()}_video"))
+    video_file = await message.download(file_name=os.path.join(TEMP_DIR, f"{uuid.uuid4()}_video.mp4"))
 
     # Store the video path in user session
     user_sessions[user_id] = {"video_path": video_file}
@@ -39,7 +39,7 @@ async def audio_handler(client: Client, message: Message):
         await message.reply("Please send a video file first.")
         return
 
-    audio_file = await message.download(file_name=os.path.join(TEMP_DIR, f"{uuid.uuid4()}_audio"))
+    audio_file = await message.download(file_name=os.path.join(TEMP_DIR, f"{uuid.uuid4()}_audio.mp3"))
 
     # Get the video path from user session
     video_path = user_sessions[user_id]["video_path"]
@@ -48,10 +48,11 @@ async def audio_handler(client: Client, message: Message):
     output_path = os.path.join(TEMP_DIR, f"{uuid.uuid4()}_merged.mp4")
 
     # Merge video and audio
-    if merge_video_audio(video_path, audio_file, output_path):
+    try:
+        merge_video_audio(video_path, audio_file, output_path)
         await message.reply_video(video=output_path, caption="Here is your merged video.")
-    else:
-        await message.reply("Sorry, there was an error merging your video and audio.")
+    except Exception as e:
+        await message.reply(f"Sorry, there was an error merging your video and audio: {e}")
 
     # Clean up
     os.remove(video_path)
