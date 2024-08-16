@@ -1,4 +1,5 @@
-import ffmpeg  # This imports the ffmpeg-python library
+import ffmpeg
+import subprocess
 
 def merge_video_audio(video_path, audio_path, output_path):
     """
@@ -6,14 +7,17 @@ def merge_video_audio(video_path, audio_path, output_path):
     Removes all existing audio tracks from the video and replaces them with the provided audio.
     """
     try:
-        (
-            ffmpeg
-            .input(video_path)
-            .input(audio_path)
-            .output(output_path, vcodec='copy', acodec='aac', shortest=None)
-            .run(overwrite_output=True)
-        )
+        # Build the FFmpeg command
+        input_video = ffmpeg.input(video_path)
+        input_audio = ffmpeg.input(audio_path)
+        stream = ffmpeg.output(input_video, input_audio, output_path, vcodec='copy', acodec='aac', strict='experimental')
+        
+        # Execute the command
+        ffmpeg.run(stream, overwrite_output=True)
         return True
     except ffmpeg.Error as e:
-        print(f"Error: {e.stderr}")
-        return False
+        print(f"FFmpeg error: {e.stderr.decode()}")
+        raise
+    except Exception as e:
+        print(f"An error occurred: {str(e)}")
+        raise
