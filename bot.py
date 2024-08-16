@@ -4,9 +4,9 @@ from pyrogram.types import Message
 import ffmpeg
 
 # Replace with your own values
-API_ID = "your_api_id"
-API_HASH = "your_api_hash"
-BOT_TOKEN = "your_bot_token"
+API_ID = "28015531"
+API_HASH = "2ab4ba37fd5d9ebf1353328fc915ad28"
+BOT_TOKEN = "7321073695:AAE2ZvYJg6_dQNhEvznmRCSsKMoNHoQWnuI"
 
 app = Client("video_audio_merge_bot", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN)
 
