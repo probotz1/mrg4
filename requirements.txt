@@ -1,0 +1,3 @@
+pyrogram==2.0.110
+tgcrypto==1.2.3
+ffmpeg-python==0.2.0
