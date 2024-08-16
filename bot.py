@@ -1,6 +1,6 @@
 from pyrogram import Client, filters
 from pyrogram.types import Message
-from ffmpeg import merge_video_audio
+from ffmpeg_handler import merge_video_audio
 import os
 import uuid
 
